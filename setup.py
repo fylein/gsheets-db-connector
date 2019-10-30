@@ -9,7 +9,7 @@ with open('README.md', 'r') as f:
 
 setuptools.setup(
     name='gsheets-db-connector',
-    version='0.1.0',
+    version='0.2.0',
     author='Shwetabh Kumar',
     author_email='shwetabh.kumar@fyle.in',
     description='Connects Google sheets to a database connector to transfer information to and fro.',
@@ -22,7 +22,9 @@ setuptools.setup(
     install_requires=[
         'logger==1.4',
         'pandas==0.25.2',
-        'typing==3.7.4.1'
+        'typing==3.7.4.1',
+        'gspread==3.1.0',
+        'google-api-python-client==1.6.7'
     ],
     classifiers=[
         'Topic :: Internet :: WWW/HTTP',
