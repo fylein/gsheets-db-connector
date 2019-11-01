@@ -22,13 +22,22 @@ class GoogleSheetsConnector:
     - Extract Data from Google Sheets and load to SQLite
     - Write Data to Google Sheets
     """
-    def __init__(self, config, sqlite):
+    def __init__(self, config, db_conn):
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(
             json.loads(config.get('gsheets_credentials')), scope)
         self.__client = gspread.authorize(credentials)
         self.__sheet = self.__client.open(config.get('sheet_name'))
-        self.__sqlite = sqlite
+        self.__dbconn = db_conn
         logger.info('Google Sheets connection established.')
+
+    def create_tables(self, file_path: str) -> None:
+        """
+        Creates DB tables
+        :param file_path: absolute path to the .sql file
+        :return: None
+        """
+        ddl_sql = open(file_path, 'r').read()
+        self.__dbconn.executescript(ddl_sql)
 
     def update_cell(self, worksheet: str, cell: str, new_value: any) -> None:
         """
@@ -64,7 +73,7 @@ class GoogleSheetsConnector:
             df = pd.DataFrame(data.get_all_records())
             logger.info('%s %s extracted', len(df.index), worksheet.title)
             if len(df.index):
-                df.to_sql(worksheet.title, self.__sqlite.connection, if_exists='replace', index=False)
+                df.to_sql(worksheet.title, self.__dbconn, if_exists='append', index=False)
 
         logger.info('Mappings were successfully extracted from google sheets.')
 
