@@ -4,13 +4,12 @@ GoogleSheetsConnector(): Connection between Google Sheets and SQLite
 
 import json
 import logging
-from typing import List
+from typing import List, Dict
 
 import gspread
 import pandas as pd
 
 from oauth2client.service_account import ServiceAccountCredentials
-
 
 logger = logging.getLogger('GoogleSheetsConnector')
 
@@ -22,6 +21,7 @@ class GoogleSheetsConnector:
     - Extract Data from Google Sheets and load to SQLite
     - Write Data to Google Sheets
     """
+
     def __init__(self, config, db_conn):
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(
             json.loads(config.get('gsheets_credentials')), scope)
@@ -92,3 +92,49 @@ class GoogleSheetsConnector:
             cell_list[i].value = val
 
         self.__sheet.worksheet(worksheet).update_cells(cell_list)
+
+    def create_worksheet(self, title: str) -> None:
+        """
+        Create a New Worksheet
+        :param title: title of the new worksheet.
+        :return: None
+        """
+        if title in [ws.title for ws in self.__sheet.worksheets()]:
+            logger.error("Worksheet '%s' already exists", title)
+        else:
+            logger.info('Creating Worksheet')
+            self.__sheet.add_worksheet(title, rows=None, cols=None)
+            logger.info('Worksheet created')
+
+    def load_sheets(self, data_frames: List[Dict]) -> None:
+        """
+        Writes data to Google Sheets
+        :param data_frames: List of dicts with table name 'table' and worksheet name 'sheet_name'
+        :return: None
+        """
+        for data_frame in data_frames:
+            df = pd.read_sql_query(sql='select * from {0}'.format(data_frame['table']), con=self.__dbconn)
+            df.fillna('', inplace=True)
+            df_headers = df.columns.values.tolist()
+            df_headers_array = [df_headers]
+            df_data = df.values.tolist()
+            body_data = df_headers_array + df_data
+            col_size = len(body_data[0])
+            org_name = data_frame['sheet_name']
+            params = {
+                'value_input_option': 'USER_ENTERED',
+                'insert_data_option': 'OVERWRITE'
+            }
+            body = {
+                "majorDimension": "ROWS",
+                "values": body_data
+            }
+
+            RANGE_NAME = "{0}!A1:{1}".format(org_name, col_size)
+            sheets_list = [ws.title for ws in self.__sheet.worksheets()]
+            if org_name not in sheets_list:
+                self.__sheet.add_worksheet(title=org_name, rows=None, cols=None)
+            self.__sheet.worksheet(title=org_name).clear()
+            logger.info('Writing data to Google Sheet')
+            self.__sheet.values_append(range=RANGE_NAME, params=params, body=body)
+            logger.info('Data successfully uploaded')
