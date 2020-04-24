@@ -86,7 +86,7 @@ class GoogleSheetsConnector:
         :param cell_values: list of values to be updated
         :return: None
         """
-        cell_list = self.__sheet.worksheet(worksheet).range(('%s:%s', start_cell, end_cell))
+        cell_list = self.__sheet.worksheet(worksheet).range('{0}:{1}'.format(start_cell, end_cell))
 
         for i, val in enumerate(cell_values):
             cell_list[i].value = val
